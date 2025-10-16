@@ -58,6 +58,14 @@ class ClientAdmin(admin.ModelAdmin):
         [_(u'Credentials'), {
             'fields': ('client_id', 'client_secret', 'scope'),
         }],
+        [_(u'Origin Security'), {
+            'fields': (
+                'allowed_origins',
+                'strict_origin_validation',
+                'include_origin_in_tokens',
+            ),
+            'description': 'Configure which domains can make requests and track origins in tokens',
+        }],
         [_(u'Token Signing'), {
             'fields': ('jwt_alg', 'access_token_jwt_alg'),
         }],
@@ -65,6 +73,16 @@ class ClientAdmin(admin.ModelAdmin):
             'fields': (
                 'id_token_encrypted_response_alg', 'id_token_encrypted_response_enc',
                 'access_token_encrypted_response_alg', 'access_token_encrypted_response_enc'),
+            'classes': ('collapse',),
+        }],
+        [_(u'Refresh Token Settings (Optional)'), {
+            'fields': (
+                'refresh_token_format',
+                ('refresh_token_jwt_alg', 'refresh_token_expire_seconds'),
+                ('refresh_token_encrypted_response_alg', 'refresh_token_encrypted_response_enc'),
+                'enable_refresh_token_rotation',
+                ('refresh_token_grace_period_seconds', 'detect_refresh_token_reuse'),
+            ),
             'classes': ('collapse',),
         }],
         [_(u'Information'), {
