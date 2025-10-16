@@ -1,0 +1,26 @@
+# Modern OIDC Provider Dependencies
+# Updated for security and modern Python/Django support
+
+# Core Framework
+Django>=3.2,<5.0  # LTS versions supported
+
+# JWT/JWE/JWS handling - Modern replacement for pyjwkest
+authlib>=1.3.0  # Modern, actively maintained, secure JWT/OAuth2/OIDC library
+
+# Cryptography
+cryptography>=41.0.0  # Modern cryptography library (replaces pycryptodomex for some operations)
+pycryptodomex>=3.19.0  # For RSA/EC key operations
+
+# Security
+django-cors-headers>=4.3.0  # CORS support for API endpoints
+
+# Optional but recommended
+python-jose[cryptography]>=3.3.0  # Additional JWT support (backup/compatibility)
+
+# Development dependencies (optional)
+# pytest>=7.4.0
+# pytest-django>=4.5.0
+# pytest-cov>=4.1.0
+# black>=23.0.0
+# flake8>=6.1.0
+# mypy>=1.5.0
