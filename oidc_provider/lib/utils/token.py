@@ -4,10 +4,13 @@ import uuid
 import json
 
 from Cryptodome.PublicKey.RSA import importKey
+from Cryptodome.PublicKey import ECC
 from django.utils import dateformat, timezone
 from jwkest.jwk import RSAKey as jwk_RSAKey
+from jwkest.jwk import ECKey as jwk_ECKey
 from jwkest.jwk import SYMKey
 from jwkest.jws import JWS
+from jwkest.jwe import JWE
 from jwkest.jwt import JWT
 
 from oidc_provider.lib.utils.common import (
@@ -23,6 +26,7 @@ from oidc_provider.lib.errors import (
 from oidc_provider.models import (
     Code,
     RSAKey,
+    ECKey,
     Token,
     Client,
 )
@@ -79,23 +83,68 @@ def create_id_token(token, user, aud, nonce='', at_hash='', request=None, scope=
     return dic
 
 
-def encode_jwt(payload, client):
+def encode_jwt(payload, client, alg=None):
     """
     Represent payload as a JSON Web Token (JWT).
     Return a hash.
     """
-    keys = get_client_alg_keys(client)
-    _jws = JWS(payload, alg=client.jwt_alg)
-    return _jws.sign_compact(keys)
+    algorithm = alg or client.jwt_alg
+    keys = get_client_alg_keys(client, algorithm)
+    _jws = JWS(payload, alg=algorithm)
+    jwt_token = _jws.sign_compact(keys)
+    
+    # Apply encryption if configured for ID tokens (backward compatible)
+    if client.id_token_encrypted_response_alg and client.id_token_encrypted_response_enc:
+        jwt_token = encrypt_jwt(
+            jwt_token,
+            client,
+            client.id_token_encrypted_response_alg,
+            client.id_token_encrypted_response_enc
+        )
+    
+    return jwt_token
 
 
-def decode_jwt(jwt, client):
+def encrypt_jwt(jwt_string, client, alg, enc):
+    """
+    Encrypt a JWT using JWE.
+    Return encrypted JWT string.
+    """
+    if not alg or not enc:
+        return jwt_string
+    
+    keys = get_client_encryption_keys(client, alg)
+    if not keys:
+        return jwt_string
+    
+    _jwe = JWE(jwt_string, alg=alg, enc=enc)
+    return _jwe.serialize(keys[0])
+
+
+def decode_jwt(jwt, client, alg=None):
     """
     Decode a JSON Web Token (JWT). If the signature doesn't match, raise BadSignature.
     Return a dict.
     """
-    keys = get_client_alg_keys(client)
+    algorithm = alg or client.jwt_alg
+    keys = get_client_alg_keys(client, algorithm)
     return JWS().verify_compact(jwt, keys=keys)
+
+
+def decrypt_jwt(jwe_string, client, alg, enc):
+    """
+    Decrypt a JWE.
+    Return decrypted JWT string.
+    """
+    if not alg or not enc:
+        return jwe_string
+    
+    keys = get_client_encryption_keys(client, alg)
+    if not keys:
+        return jwe_string
+    
+    _jwe = JWE()
+    return _jwe.decrypt(jwe_string, keys=keys)
 
 
 def client_id_from_id_token(id_token):
@@ -167,7 +216,20 @@ def encode_access_token_jwt(user, client, token, request):
         extra_info = settings.get('OIDC_TOKEN_JWT_EXTRA_INFO', import_str=True)(token)
         payload.update(extra_info)
 
-    return encode_jwt(payload, client)
+    # Use access token specific algorithm if set
+    alg = client.access_token_jwt_alg or client.jwt_alg
+    jwt_token = encode_jwt(payload, client, alg=alg)
+    
+    # Encrypt if encryption is configured
+    if client.access_token_encrypted_response_alg and client.access_token_encrypted_response_enc:
+        jwt_token = encrypt_jwt(
+            jwt_token, 
+            client, 
+            client.access_token_encrypted_response_alg,
+            client.access_token_encrypted_response_enc
+        )
+    
+    return jwt_token
 
 
 def wrapper_decode_jwt(access_token_jwt):
@@ -227,20 +289,69 @@ def create_code(user, client, scope, nonce, is_authentication,
     return code
 
 
-def get_client_alg_keys(client):
+def get_client_alg_keys(client, alg=None):
     """
     Takes a client and returns the set of keys associated with it.
     Returns a list of keys.
     """
-    if client.jwt_alg == 'RS256':
+    algorithm = alg or client.jwt_alg
+    
+    # RSA-based algorithms (RS256, RS384, RS512, PS256, PS384, PS512)
+    if algorithm.startswith('RS') or algorithm.startswith('PS'):
         keys = []
         for rsakey in RSAKey.objects.all():
             keys.append(jwk_RSAKey(key=importKey(rsakey.key), kid=rsakey.kid))
         if not keys:
             raise Exception('You must add at least one RSA Key.')
-    elif client.jwt_alg == 'HS256':
-        keys = [SYMKey(key=client.client_secret, alg=client.jwt_alg)]
+    # HMAC-based algorithms (HS256, HS384, HS512)
+    elif algorithm.startswith('HS'):
+        keys = [SYMKey(key=client.client_secret, alg=algorithm)]
+    # Elliptic Curve algorithms (ES256, ES384, ES512)
+    elif algorithm.startswith('ES'):
+        keys = []
+        # Map algorithm to curve
+        alg_to_crv = {
+            'ES256': 'P-256',
+            'ES384': 'P-384',
+            'ES512': 'P-521',
+        }
+        expected_crv = alg_to_crv.get(algorithm)
+        for eckey in ECKey.objects.filter(crv=expected_crv):
+            try:
+                ec_key = ECC.import_key(eckey.key)
+                keys.append(jwk_ECKey(key=ec_key, kid=eckey.kid))
+            except Exception as e:
+                # Skip invalid keys
+                pass
+        if not keys:
+            raise Exception(f'You must add at least one EC Key with curve {expected_crv} for {algorithm}.')
     else:
-        raise Exception('Unsupported key algorithm.')
+        raise Exception(f'Unsupported key algorithm: {algorithm}')
 
+    return keys
+
+
+def get_client_encryption_keys(client, alg):
+    """
+    Get keys for JWE encryption.
+    Returns a list of keys suitable for encryption.
+    """
+    keys = []
+    
+    # RSA-based encryption
+    if alg.startswith('RSA'):
+        for rsakey in RSAKey.objects.all():
+            keys.append(jwk_RSAKey(key=importKey(rsakey.key), kid=rsakey.kid))
+    # ECDH-based encryption
+    elif alg.startswith('ECDH'):
+        for eckey in ECKey.objects.all():
+            try:
+                ec_key = ECC.import_key(eckey.key)
+                keys.append(jwk_ECKey(key=ec_key, kid=eckey.kid))
+            except Exception:
+                pass
+    # Symmetric key wrapping
+    elif alg in ['A128KW', 'A192KW', 'A256KW', 'dir']:
+        keys = [SYMKey(key=client.client_secret, alg=alg)]
+    
     return keys

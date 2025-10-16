@@ -26,7 +26,39 @@ RESPONSE_TYPE_CHOICES = [
 
 JWT_ALGS = [
     ('HS256', 'HS256'),
+    ('HS384', 'HS384'),
+    ('HS512', 'HS512'),
     ('RS256', 'RS256'),
+    ('RS384', 'RS384'),
+    ('RS512', 'RS512'),
+    ('ES256', 'ES256'),
+    ('ES384', 'ES384'),
+    ('ES512', 'ES512'),
+    ('PS256', 'PS256'),
+    ('PS384', 'PS384'),
+    ('PS512', 'PS512'),
+]
+
+JWT_ENC_ALGS = [
+    ('RSA-OAEP', 'RSA-OAEP'),
+    ('RSA-OAEP-256', 'RSA-OAEP-256'),
+    ('A128KW', 'A128KW'),
+    ('A192KW', 'A192KW'),
+    ('A256KW', 'A256KW'),
+    ('dir', 'dir'),
+    ('ECDH-ES', 'ECDH-ES'),
+    ('ECDH-ES+A128KW', 'ECDH-ES+A128KW'),
+    ('ECDH-ES+A192KW', 'ECDH-ES+A192KW'),
+    ('ECDH-ES+A256KW', 'ECDH-ES+A256KW'),
+]
+
+JWT_ENC_ENCS = [
+    ('A128CBC-HS256', 'A128CBC-HS256'),
+    ('A192CBC-HS384', 'A192CBC-HS384'),
+    ('A256CBC-HS512', 'A256CBC-HS512'),
+    ('A128GCM', 'A128GCM'),
+    ('A192GCM', 'A192GCM'),
+    ('A256GCM', 'A256GCM'),
 ]
 
 GRANT_TYPES_CHOICES = [
@@ -106,6 +138,44 @@ class Client(models.Model):
         default='RS256',
         verbose_name=_(u'JWT Algorithm'),
         help_text=_(u'Algorithm used to encode ID Tokens.'))
+    access_token_jwt_alg = models.CharField(
+        max_length=10,
+        choices=JWT_ALGS,
+        default='RS256',
+        blank=True,
+        null=True,
+        verbose_name=_(u'Access Token JWT Algorithm'),
+        help_text=_(u'Algorithm used to encode Access Tokens. If not set, uses jwt_alg.'))
+    id_token_encrypted_response_alg = models.CharField(
+        max_length=30,
+        choices=JWT_ENC_ALGS,
+        blank=True,
+        null=True,
+        verbose_name=_(u'ID Token Encryption Algorithm'),
+        help_text=_(u'JWE alg algorithm for encrypting ID Tokens.'))
+    id_token_encrypted_response_enc = models.CharField(
+        max_length=30,
+        choices=JWT_ENC_ENCS,
+        default='A128CBC-HS256',
+        blank=True,
+        null=True,
+        verbose_name=_(u'ID Token Encryption Encoding'),
+        help_text=_(u'JWE enc algorithm for encrypting ID Tokens.'))
+    access_token_encrypted_response_alg = models.CharField(
+        max_length=30,
+        choices=JWT_ENC_ALGS,
+        blank=True,
+        null=True,
+        verbose_name=_(u'Access Token Encryption Algorithm'),
+        help_text=_(u'JWE alg algorithm for encrypting Access Tokens.'))
+    access_token_encrypted_response_enc = models.CharField(
+        max_length=30,
+        choices=JWT_ENC_ENCS,
+        default='A128CBC-HS256',
+        blank=True,
+        null=True,
+        verbose_name=_(u'Access Token Encryption Encoding'),
+        help_text=_(u'JWE enc algorithm for encrypting Access Tokens.'))
     date_created = models.DateField(auto_now_add=True, verbose_name=_(u'Date Created'))
     website_url = models.CharField(
         max_length=255, blank=True, default='', verbose_name=_(u'Website URL'))
@@ -285,6 +355,35 @@ class RSAKey(models.Model):
     class Meta:
         verbose_name = _(u'RSA Key')
         verbose_name_plural = _(u'RSA Keys')
+
+    def __str__(self):
+        return u'{0}'.format(self.kid)
+
+    def __unicode__(self):
+        return self.__str__()
+
+    @property
+    def kid(self):
+        return u'{0}'.format(md5(self.key.encode('utf-8')).hexdigest() if self.key else '')
+
+
+class ECKey(models.Model):
+    """
+    Elliptic Curve Key for ES256, ES384, ES512 algorithms.
+    """
+    key = models.TextField(
+        verbose_name=_(u'Key'), 
+        help_text=_(u'Paste your private EC Key here in PEM format.'))
+    crv = models.CharField(
+        max_length=10,
+        choices=[('P-256', 'P-256'), ('P-384', 'P-384'), ('P-521', 'P-521')],
+        default='P-256',
+        verbose_name=_(u'Curve'),
+        help_text=_(u'Elliptic curve (P-256 for ES256, P-384 for ES384, P-521 for ES512)'))
+
+    class Meta:
+        verbose_name = _(u'EC Key')
+        verbose_name_plural = _(u'EC Keys')
 
     def __str__(self):
         return u'{0}'.format(self.kid)
