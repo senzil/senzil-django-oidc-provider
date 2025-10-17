@@ -4,11 +4,8 @@ from django.views.decorators.csrf import csrf_exempt
 from oidc_provider import (
     settings,
     views,
-<<<<<<< HEAD
-=======
     views_consent,
     views_registration,
->>>>>>> d7b1e26 (feat: Implement dynamic client registration (RFC 7591/7592))
 )
 
 app_name = 'oidc_provider'
@@ -28,8 +25,6 @@ if settings.get('OIDC_SESSION_MANAGEMENT_ENABLE'):
         re_path(r'^check-session-iframe/?$', views.CheckSessionIframeView.as_view(),
             name='check-session-iframe'),
     ]
-<<<<<<< HEAD
-=======
 
 # Consent management URLs
 urlpatterns += [
@@ -46,4 +41,3 @@ if settings.get('OIDC_DYNAMIC_CLIENT_REGISTRATION_ENABLE', True):
         url(r'^register/?$', views_registration.client_registration, name='client-registration'),
         url(r'^register/(?P<client_id>[^/]+)/?$', views_registration.ClientManagementView.as_view(), name='client-management'),
     ]
->>>>>>> d7b1e26 (feat: Implement dynamic client registration (RFC 7591/7592))

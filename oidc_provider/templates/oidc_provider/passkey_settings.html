@@ -1,0 +1,569 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Passkey Settings</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f3f4f6;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            color: #1f2937;
+            margin-bottom: 8px;
+        }
+        
+        .header p {
+            color: #6b7280;
+            font-size: 14px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 16px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1f2937;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #5568d3;
+        }
+        
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+        
+        .passkey-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .passkey-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px;
+            background: #f9fafb;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+        }
+        
+        .passkey-info {
+            flex: 1;
+        }
+        
+        .passkey-name {
+            font-size: 16px;
+            font-weight: 500;
+            color: #1f2937;
+            margin-bottom: 4px;
+        }
+        
+        .passkey-meta {
+            font-size: 13px;
+            color: #6b7280;
+        }
+        
+        .passkey-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 500;
+            margin-left: 8px;
+        }
+        
+        .badge-platform {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+        
+        .badge-synced {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 48px 24px;
+        }
+        
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+        
+        .empty-title {
+            font-size: 18px;
+            color: #1f2937;
+            margin-bottom: 8px;
+        }
+        
+        .empty-text {
+            color: #6b7280;
+            font-size: 14px;
+            margin-bottom: 24px;
+        }
+        
+        .info-box {
+            background: #eff6ff;
+            border: 1px solid #dbeafe;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 24px;
+        }
+        
+        .info-box h3 {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1e40af;
+            margin-bottom: 8px;
+        }
+        
+        .info-box p {
+            font-size: 13px;
+            color: #1e40af;
+            margin-bottom: 8px;
+        }
+        
+        .info-box ul {
+            margin-left: 20px;
+            font-size: 13px;
+            color: #1e40af;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .modal.active {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 400px;
+            width: 90%;
+        }
+        
+        .modal-header {
+            margin-bottom: 16px;
+        }
+        
+        .modal-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #1f2937;
+        }
+        
+        .modal-body {
+            margin-bottom: 24px;
+        }
+        
+        .form-group {
+            margin-bottom: 16px;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #374151;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .modal-footer {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+        
+        .btn-secondary {
+            background: #e5e7eb;
+            color: #374151;
+        }
+        
+        .btn-secondary:hover {
+            background: #d1d5db;
+        }
+        
+        .alert {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 14px;
+        }
+        
+        .alert-success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #6ee7b7;
+        }
+        
+        .alert-error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Passkey Settings</h1>
+            <p>Manage your passkeys for secure, passwordless sign-in</p>
+        </div>
+        
+        <div id="alert-container"></div>
+        
+        <div class="info-box">
+            <h3>🔐 What are passkeys?</h3>
+            <p>Passkeys are a secure replacement for passwords that use biometric authentication:</p>
+            <ul>
+                <li>No passwords to remember or type</li>
+                <li>Protected by your device's biometric security (Face ID, Touch ID, fingerprint)</li>
+                <li>Can't be phished or stolen</li>
+                <li>Sync across your devices (on supported platforms)</li>
+            </ul>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">Your Passkeys</div>
+                <button id="add-passkey-btn" class="btn btn-primary">
+                    ➕ Add Passkey
+                </button>
+            </div>
+            
+            <div id="passkey-list" class="passkey-list">
+                <!-- Populated by JavaScript -->
+            </div>
+        </div>
+    </div>
+    
+    <!-- Add Passkey Modal -->
+    <div id="add-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Add Passkey</h2>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label" for="passkey-name">Name (optional)</label>
+                    <input type="text" id="passkey-name" class="form-input" placeholder="e.g., iPhone, Laptop, Security Key">
+                </div>
+                <p style="font-size: 13px; color: #6b7280;">
+                    You'll be prompted to use your device's biometric authentication.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button id="cancel-add" class="btn btn-secondary">Cancel</button>
+                <button id="confirm-add" class="btn btn-primary">Create Passkey</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const passkeyList = document.getElementById('passkey-list');
+        const addModal = document.getElementById('add-modal');
+        const addBtn = document.getElementById('add-passkey-btn');
+        const cancelBtn = document.getElementById('cancel-add');
+        const confirmBtn = document.getElementById('confirm-add');
+        const passkeyNameInput = document.getElementById('passkey-name');
+        const alertContainer = document.getElementById('alert-container');
+        
+        // Load passkeys
+        async function loadPasskeys() {
+            try {
+                const response = await fetch('{% url "passkey-list" %}');
+                const data = await response.json();
+                
+                if (data.passkeys.length === 0) {
+                    passkeyList.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-icon">🔑</div>
+                            <h3 class="empty-title">No passkeys yet</h3>
+                            <p class="empty-text">Add a passkey to enable secure, passwordless sign-in</p>
+                        </div>
+                    `;
+                } else {
+                    passkeyList.innerHTML = data.passkeys.map(passkey => `
+                        <div class="passkey-item">
+                            <div class="passkey-info">
+                                <div class="passkey-name">
+                                    ${passkey.name}
+                                    ${passkey.authenticator_attachment === 'platform' ? 
+                                        '<span class="passkey-badge badge-platform">Platform</span>' : ''}
+                                    ${passkey.backup_state ? 
+                                        '<span class="passkey-badge badge-synced">Synced</span>' : ''}
+                                </div>
+                                <div class="passkey-meta">
+                                    Added ${new Date(passkey.created_at).toLocaleDateString()}
+                                    ${passkey.last_used_at ? 
+                                        ` • Last used ${new Date(passkey.last_used_at).toLocaleDateString()}` : ''}
+                                </div>
+                            </div>
+                            <button class="btn btn-danger" onclick="deletePasskey(${passkey.id})">
+                                Remove
+                            </button>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                showAlert('Failed to load passkeys', 'error');
+            }
+        }
+        
+        // Show modal
+        addBtn.addEventListener('click', () => {
+            addModal.classList.add('active');
+            passkeyNameInput.value = '';
+            passkeyNameInput.focus();
+        });
+        
+        // Hide modal
+        cancelBtn.addEventListener('click', () => {
+            addModal.classList.remove('active');
+        });
+        
+        // Create passkey
+        confirmBtn.addEventListener('click', async () => {
+            try {
+                confirmBtn.disabled = true;
+                confirmBtn.textContent = 'Creating...';
+                
+                // Get registration options
+                const optionsResponse = await fetch('{% url "passkey-register-options" %}', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken'),
+                    }
+                });
+                
+                const { options } = await optionsResponse.json();
+                
+                // Convert base64 to ArrayBuffer
+                options.challenge = base64ToArrayBuffer(options.challenge);
+                options.user.id = base64ToArrayBuffer(options.user.id);
+                if (options.excludeCredentials) {
+                    options.excludeCredentials = options.excludeCredentials.map(cred => ({
+                        ...cred,
+                        id: base64ToArrayBuffer(cred.id)
+                    }));
+                }
+                
+                // Create credential
+                const credential = await navigator.credentials.create({
+                    publicKey: options
+                });
+                
+                // Prepare credential for server
+                const credentialJSON = {
+                    id: credential.id,
+                    rawId: arrayBufferToBase64(credential.rawId),
+                    response: {
+                        attestationObject: arrayBufferToBase64(credential.response.attestationObject),
+                        clientDataJSON: arrayBufferToBase64(credential.response.clientDataJSON)
+                    },
+                    type: credential.type
+                };
+                
+                // Send to server
+                const verifyResponse = await fetch('{% url "passkey-register-verify" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken'),
+                    },
+                    body: JSON.stringify({
+                        credential: credentialJSON,
+                        name: passkeyNameInput.value || 'Unnamed passkey'
+                    })
+                });
+                
+                const result = await verifyResponse.json();
+                
+                if (result.success) {
+                    addModal.classList.remove('active');
+                    showAlert('Passkey added successfully!', 'success');
+                    loadPasskeys();
+                } else {
+                    showAlert(result.error || 'Failed to add passkey', 'error');
+                }
+                
+            } catch (error) {
+                console.error('Passkey creation error:', error);
+                if (error.name === 'NotAllowedError') {
+                    showAlert('Passkey creation cancelled', 'error');
+                } else {
+                    showAlert('Failed to create passkey: ' + error.message, 'error');
+                }
+            } finally {
+                confirmBtn.disabled = false;
+                confirmBtn.textContent = 'Create Passkey';
+            }
+        });
+        
+        // Delete passkey
+        async function deletePasskey(id) {
+            if (!confirm('Are you sure you want to remove this passkey?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`{% url "passkey-delete" 0 %}`.replace('0', id), {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken'),
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert('Passkey removed successfully', 'success');
+                    loadPasskeys();
+                } else {
+                    showAlert(result.error || 'Failed to remove passkey', 'error');
+                }
+            } catch (error) {
+                showAlert('Failed to remove passkey', 'error');
+            }
+        }
+        
+        // Helper functions
+        function base64ToArrayBuffer(base64) {
+            const binaryString = atob(base64.replace(/-/g, '+').replace(/_/g, '/'));
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            return bytes.buffer;
+        }
+        
+        function arrayBufferToBase64(buffer) {
+            const bytes = new Uint8Array(buffer);
+            let binary = '';
+            for (let i = 0; i < bytes.byteLength; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+        }
+        
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        
+        function showAlert(message, type) {
+            const alertClass = type === 'success' ? 'alert-success' : 'alert-error';
+            alertContainer.innerHTML = `<div class="alert ${alertClass}">${message}</div>`;
+            setTimeout(() => {
+                alertContainer.innerHTML = '';
+            }, 5000);
+        }
+        
+        // Load passkeys on page load
+        loadPasskeys();
+    </script>
+</body>
+</html>

@@ -10,6 +10,7 @@ except ImportError:
     from urllib.parse import urlsplit, parse_qs, urlunsplit, urlencode
 
 from Cryptodome.PublicKey import RSA
+from Cryptodome.PublicKey import ECC
 from django.contrib.auth.views import (
     redirect_to_login,
     LogoutView,
@@ -53,9 +54,14 @@ from oidc_provider.lib.utils.token import client_id_from_id_token
 from oidc_provider.models import (
     Client,
     RSAKey,
+    ECKey,
     ResponseType,
     Scope,
-    GRANT_TYPES_CHOICES)
+    GRANT_TYPES_CHOICES,
+    JWT_ALGS,
+    JWT_ENC_ALGS,
+    JWT_ENC_ENCS,
+)
 from oidc_provider import settings
 from oidc_provider import signals
 
@@ -284,7 +290,13 @@ class ProviderInfoView(View):
 
         dic['grant_types_supported'] = GRANT_TYPES_CHOICES
         
-        dic['id_token_signing_alg_values_supported'] = ['HS256', 'RS256']
+        # Get all supported signing algorithms
+        dic['id_token_signing_alg_values_supported'] = [alg[0] for alg in JWT_ALGS]
+        dic['token_endpoint_auth_signing_alg_values_supported'] = [alg[0] for alg in JWT_ALGS]
+        
+        # Encryption support
+        dic['id_token_encryption_alg_values_supported'] = [alg[0] for alg in JWT_ENC_ALGS]
+        dic['id_token_encryption_enc_values_supported'] = [enc[0] for enc in JWT_ENC_ENCS]
 
         # See: http://openid.net/specs/openid-connect-core-1_0.html#SubjectIDTypes
         dic['subject_types_supported'] = ['public']
@@ -305,6 +317,7 @@ class JwksView(View):
     def get(self, request, *args, **kwargs):
         dic = dict(keys=[])
 
+        # Add RSA keys
         for rsakey in RSAKey.objects.all():
             public_key = RSA.importKey(rsakey.key).publickey()
             dic['keys'].append({
@@ -315,6 +328,38 @@ class JwksView(View):
                 'n': long_to_base64(public_key.n),
                 'e': long_to_base64(public_key.e),
             })
+        
+        # Add EC keys
+        for eckey in ECKey.objects.all():
+            try:
+                ec_key = ECC.import_key(eckey.key)
+                # Determine algorithm based on curve
+                alg_map = {
+                    'P-256': 'ES256',
+                    'P-384': 'ES384',
+                    'P-521': 'ES512',
+                }
+                alg = alg_map.get(eckey.crv, 'ES256')
+                
+                # Get public key point coordinates
+                point = ec_key.pointQ
+                x_bytes = point.x.to_bytes((point.x.bit_length() + 7) // 8, byteorder='big')
+                y_bytes = point.y.to_bytes((point.y.bit_length() + 7) // 8, byteorder='big')
+                
+                import base64
+                dic['keys'].append({
+                    'kty': 'EC',
+                    'alg': alg,
+                    'use': 'sig',
+                    'kid': eckey.kid,
+                    'crv': eckey.crv,
+                    'x': base64.urlsafe_b64encode(x_bytes).decode('ascii').rstrip('='),
+                    'y': base64.urlsafe_b64encode(y_bytes).decode('ascii').rstrip('='),
+                })
+            except Exception as e:
+                # Skip invalid EC keys
+                logger.warning(f'Failed to export EC key {eckey.kid}: {e}')
+                pass
 
         response = JsonResponse(dic)
         response['Access-Control-Allow-Origin'] = '*'

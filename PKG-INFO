@@ -1,0 +1,44 @@
+Metadata-Version: 2.1
+Name: senzil-django-oidc-provider
+Version: 1.0.0
+Summary: Modern OpenID Connect Provider implementation for Django with passkeys, advanced security, and standards compliance
+Home-page: https://github.com/senzil/senzil-django-oidc-provider
+Author: Juan Ignacio Fiorentino
+Author-email: juanifioren@gmail.com
+Maintainer: Senzil Team
+License: MIT
+Project-URL: Documentation, https://github.com/senzil/senzil-django-oidc-provider/blob/main/docs/README.md
+Project-URL: Source, https://github.com/senzil/senzil-django-oidc-provider
+Project-URL: Tracker, https://github.com/senzil/senzil-django-oidc-provider/issues
+Keywords: django,oidc,openid-connect,oauth2,authentication,authorization,sso,passkey,webauthn,fido2,jwt,jwe
+Classifier: Development Status :: 5 - Production/Stable
+Classifier: Environment :: Web Environment
+Classifier: Framework :: Django
+Classifier: Framework :: Django :: 3.2
+Classifier: Framework :: Django :: 4.0
+Classifier: Framework :: Django :: 4.1
+Classifier: Framework :: Django :: 4.2
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Internet :: WWW/HTTP
+Classifier: Topic :: Security
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+Provides-Extra: passkey
+Provides-Extra: cors
+Provides-Extra: dev
+Provides-Extra: all
+License-File: LICENSE
+
+# Senzil Django OIDC Provider
+
+A complete, production-ready OpenID Connect Provider implementation for Django with modern security features, passkey support, and full standards compliance.
+
+See README.md for full documentation.
