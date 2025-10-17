@@ -1,11 +1,13 @@
-# Django OIDC Provider - Modernized
+# Senzil Django OIDC Provider
 
 [![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![Django](https://img.shields.io/badge/django-3.2+-green.svg)](https://www.djangoproject.com/)
+[![PyPI](https://img.shields.io/pypi/v/senzil-django-oidc-provider.svg)](https://pypi.org/project/senzil-django-oidc-provider/)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![OIDC](https://img.shields.io/badge/OIDC-Core%201.0-blue)](https://openid.net/specs/openid-connect-core-1_0.html)
 [![OAuth2](https://img.shields.io/badge/OAuth2-RFC%206749-blue)](https://tools.ietf.org/html/rfc6749)
 
-A complete, production-ready OpenID Connect Provider implementation for Django with modern security features.
+A complete, production-ready OpenID Connect Provider implementation for Django with modern security features, passkey support, and full standards compliance.
 
 ## ✨ Features
 
@@ -24,7 +26,14 @@ A complete, production-ready OpenID Connect Provider implementation for Django w
 ### Installation
 
 ```bash
-pip install django-oidc-provider
+# Install from PyPI
+pip install senzil-django-oidc-provider
+
+# With passkey support
+pip install senzil-django-oidc-provider[passkey]
+
+# With all optional features
+pip install senzil-django-oidc-provider[all]
 ```
 
 ### Setup
