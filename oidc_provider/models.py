@@ -269,6 +269,21 @@ class AbstractClient(models.Model):
         return validate_origin_for_client(origin, self)
 
 
+class Client(AbstractClient):
+    """
+    Concrete Client model.
+    
+    This model can be swapped with a custom client model using the
+    OIDC_CLIENT_MODEL setting (similar to Django's AUTH_USER_MODEL).
+    """
+    
+    class Meta:
+        verbose_name = _(u'Client')
+        verbose_name_plural = _(u'Clients')
+        db_table = 'oidc_provider_client'
+        swappable = 'OIDC_CLIENT_MODEL'
+
+
 class BaseCodeTokenModel(models.Model):
 
     client = models.ForeignKey(Client, verbose_name=_(u'Client'), on_delete=models.CASCADE)
