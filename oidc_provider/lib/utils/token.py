@@ -38,6 +38,13 @@ def create_id_token(token, user, aud, nonce='', at_hash='', request=None, scope=
     Creates the id_token dictionary.
     See: http://openid.net/specs/openid-connect-core-1_0.html#IDToken
     Return a dic.
+    
+    Guarantees all required OIDC claims are present:
+    - iss (issuer)
+    - sub (subject)
+    - aud (audience)
+    - exp (expiration)
+    - iat (issued at)
     """
     if scope is None:
         scope = []
@@ -52,6 +59,7 @@ def create_id_token(token, user, aud, nonce='', at_hash='', request=None, scope=
     user_auth_time = user.last_login or user.date_joined
     auth_time = int(dateformat.format(user_auth_time, 'U'))
 
+    # Required OIDC claims - ALWAYS include these
     dic = {
         'iss': get_issuer(request=request),
         'sub': sub,
@@ -79,6 +87,18 @@ def create_id_token(token, user, aud, nonce='', at_hash='', request=None, scope=
     dic = run_processing_hook(
         dic, 'OIDC_IDTOKEN_PROCESSING_HOOK',
         user=user, token=token, request=request)
+
+    # Ensure all required claims are present (in case hook removed them)
+    if 'iss' not in dic:
+        dic['iss'] = get_issuer(request=request)
+    if 'sub' not in dic:
+        dic['sub'] = sub
+    if 'aud' not in dic:
+        dic['aud'] = str(aud)
+    if 'exp' not in dic:
+        dic['exp'] = exp_time
+    if 'iat' not in dic:
+        dic['iat'] = iat_time
 
     return dic
 
@@ -197,6 +217,7 @@ def encode_access_token_jwt(user, client, token, request):
     Generate a JWT Access Token Response.
     Return JWT String object (return a hash).
     """
+    # Required claims for access token
     payload = {
         'iss': get_issuer(request=request),
         'client_id': str(client.client_id),
@@ -206,11 +227,16 @@ def encode_access_token_jwt(user, client, token, request):
         'jti': token.access_token,
     }
 
+    # Subject - required if user context exists
     if user is not None:
         payload['sub'] = settings.get('OIDC_IDTOKEN_SUB_GENERATOR', import_str=True)(user=user)
 
+    # Audience - ALWAYS include (use configured or default to client_id)
     if settings.get('OIDC_TOKEN_JWT_AUD') is not None:
         payload['aud'] = settings.get('OIDC_TOKEN_JWT_AUD', import_str=True)(client=client)
+    else:
+        # Default: audience is the client_id (represents the resource server)
+        payload['aud'] = str(client.client_id)
 
     if settings.get('OIDC_TOKEN_JWT_EXTRA_INFO'):
         extra_info = settings.get('OIDC_TOKEN_JWT_EXTRA_INFO', import_str=True)(token)
