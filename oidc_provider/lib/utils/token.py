@@ -60,11 +60,22 @@ def create_id_token(token, user, aud, nonce='', at_hash='', request=None, scope=
     auth_time = int(dateformat.format(user_auth_time, 'U'))
 
     # Determine audience - prefer origin domain over client_id
-    from oidc_provider.lib.utils.audience import get_id_token_audience
+    from oidc_provider.lib.utils.audience import get_id_token_audience, is_origin_allowed_for_client
     from oidc_provider.middleware_origin import get_request_origin
     
-    # Use origin domain as audience if available
-    audience = get_request_origin(request) if request else None
+    # Use origin domain as audience if available and allowed
+    audience = None
+    if request:
+        origin = get_request_origin(request)
+        if origin:
+            # Validate origin is allowed for this client
+            if is_origin_allowed_for_client(origin, token.client):
+                audience = origin
+            else:
+                # Origin not allowed - use client_id as fallback
+                # (Will be caught by middleware if strict_origin_validation=True)
+                pass
+    
     if not audience:
         audience = str(aud)  # Fallback to provided aud (client_id)
 
