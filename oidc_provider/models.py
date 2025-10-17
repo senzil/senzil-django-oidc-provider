@@ -26,7 +26,39 @@ RESPONSE_TYPE_CHOICES = [
 
 JWT_ALGS = [
     ('HS256', 'HS256'),
+    ('HS384', 'HS384'),
+    ('HS512', 'HS512'),
     ('RS256', 'RS256'),
+    ('RS384', 'RS384'),
+    ('RS512', 'RS512'),
+    ('ES256', 'ES256'),
+    ('ES384', 'ES384'),
+    ('ES512', 'ES512'),
+    ('PS256', 'PS256'),
+    ('PS384', 'PS384'),
+    ('PS512', 'PS512'),
+]
+
+JWT_ENC_ALGS = [
+    ('RSA-OAEP', 'RSA-OAEP'),
+    ('RSA-OAEP-256', 'RSA-OAEP-256'),
+    ('A128KW', 'A128KW'),
+    ('A192KW', 'A192KW'),
+    ('A256KW', 'A256KW'),
+    ('dir', 'dir'),
+    ('ECDH-ES', 'ECDH-ES'),
+    ('ECDH-ES+A128KW', 'ECDH-ES+A128KW'),
+    ('ECDH-ES+A192KW', 'ECDH-ES+A192KW'),
+    ('ECDH-ES+A256KW', 'ECDH-ES+A256KW'),
+]
+
+JWT_ENC_ENCS = [
+    ('A128CBC-HS256', 'A128CBC-HS256'),
+    ('A192CBC-HS384', 'A192CBC-HS384'),
+    ('A256CBC-HS512', 'A256CBC-HS512'),
+    ('A128GCM', 'A128GCM'),
+    ('A192GCM', 'A192GCM'),
+    ('A256GCM', 'A256GCM'),
 ]
 
 GRANT_TYPES_CHOICES = [
@@ -106,6 +138,44 @@ class Client(models.Model):
         default='RS256',
         verbose_name=_(u'JWT Algorithm'),
         help_text=_(u'Algorithm used to encode ID Tokens.'))
+    access_token_jwt_alg = models.CharField(
+        max_length=10,
+        choices=JWT_ALGS,
+        default='RS256',
+        blank=True,
+        null=True,
+        verbose_name=_(u'Access Token JWT Algorithm'),
+        help_text=_(u'Algorithm used to encode Access Tokens. If not set, uses jwt_alg.'))
+    id_token_encrypted_response_alg = models.CharField(
+        max_length=30,
+        choices=JWT_ENC_ALGS,
+        blank=True,
+        null=True,
+        verbose_name=_(u'ID Token Encryption Algorithm'),
+        help_text=_(u'JWE alg algorithm for encrypting ID Tokens.'))
+    id_token_encrypted_response_enc = models.CharField(
+        max_length=30,
+        choices=JWT_ENC_ENCS,
+        default='A128CBC-HS256',
+        blank=True,
+        null=True,
+        verbose_name=_(u'ID Token Encryption Encoding'),
+        help_text=_(u'JWE enc algorithm for encrypting ID Tokens.'))
+    access_token_encrypted_response_alg = models.CharField(
+        max_length=30,
+        choices=JWT_ENC_ALGS,
+        blank=True,
+        null=True,
+        verbose_name=_(u'Access Token Encryption Algorithm'),
+        help_text=_(u'JWE alg algorithm for encrypting Access Tokens.'))
+    access_token_encrypted_response_enc = models.CharField(
+        max_length=30,
+        choices=JWT_ENC_ENCS,
+        default='A128CBC-HS256',
+        blank=True,
+        null=True,
+        verbose_name=_(u'Access Token Encryption Encoding'),
+        help_text=_(u'JWE enc algorithm for encrypting Access Tokens.'))
     date_created = models.DateField(auto_now_add=True, verbose_name=_(u'Date Created'))
     website_url = models.CharField(
         max_length=255, blank=True, default='', verbose_name=_(u'Website URL'))
@@ -186,6 +256,18 @@ class Client(models.Model):
     @property
     def default_redirect_uri(self):
         return self.redirect_uris[0] if self.redirect_uris else ''
+    
+    @property
+    def allowed_origins_list(self):
+        """Get list of allowed origins."""
+        if not hasattr(self, 'allowed_origins') or not self.allowed_origins:
+            return []
+        return [origin.strip() for origin in self.allowed_origins.split('\n') if origin.strip()]
+    
+    def is_origin_allowed(self, origin):
+        """Check if origin is allowed for this client."""
+        from oidc_provider.lib.utils.token_origin import validate_origin_for_client
+        return validate_origin_for_client(origin, self)
 
 
 class BaseCodeTokenModel(models.Model):
@@ -222,6 +304,7 @@ class Code(BaseCodeTokenModel):
     code_challenge = models.CharField(max_length=255, null=True, verbose_name=_(u'Code Challenge'))
     code_challenge_method = models.CharField(
         max_length=255, null=True, verbose_name=_(u'Code Challenge Method'))
+    origin_domain = models.CharField(max_length=255, blank=True, verbose_name=_(u'Origin Domain'))
 
     class Meta:
         verbose_name = _(u'Authorization Code')
@@ -238,6 +321,7 @@ class Token(BaseCodeTokenModel):
     access_token = models.CharField(max_length=255, unique=True, verbose_name=_(u'Access Token'))
     refresh_token = models.CharField(max_length=255, unique=True, verbose_name=_(u'Refresh Token'))
     _id_token = models.TextField(verbose_name=_(u'ID Token'))
+    origin_domain = models.CharField(max_length=255, blank=True, verbose_name=_(u'Origin Domain'))
 
     class Meta:
         verbose_name = _(u'Token')
@@ -295,3 +379,275 @@ class RSAKey(models.Model):
     @property
     def kid(self):
         return u'{0}'.format(md5(self.key.encode('utf-8')).hexdigest() if self.key else '')
+
+
+class ECKey(models.Model):
+    """
+    Elliptic Curve Key for ES256, ES384, ES512 algorithms.
+    """
+    key = models.TextField(
+        verbose_name=_(u'Key'), 
+        help_text=_(u'Paste your private EC Key here in PEM format.'))
+    crv = models.CharField(
+        max_length=10,
+        choices=[('P-256', 'P-256'), ('P-384', 'P-384'), ('P-521', 'P-521')],
+        default='P-256',
+        verbose_name=_(u'Curve'),
+        help_text=_(u'Elliptic curve (P-256 for ES256, P-384 for ES384, P-521 for ES512)'))
+
+    class Meta:
+        verbose_name = _(u'EC Key')
+        verbose_name_plural = _(u'EC Keys')
+
+    def __str__(self):
+        return u'{0}'.format(self.kid)
+
+    def __unicode__(self):
+        return self.__str__()
+
+    @property
+    def kid(self):
+        return u'{0}'.format(md5(self.key.encode('utf-8')).hexdigest() if self.key else '')
+
+
+class WebAuthnCredential(models.Model):
+    """WebAuthn/FIDO2 credential (passkey)."""
+    
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='webauthn_credentials',
+        verbose_name=_(u'User')
+    )
+    
+    credential_id = models.TextField(
+        unique=True,
+        verbose_name=_(u'Credential ID'),
+        help_text=_(u'Base64-encoded credential ID')
+    )
+    
+    public_key = models.TextField(
+        verbose_name=_(u'Public Key'),
+        help_text=_(u'Base64-encoded COSE public key')
+    )
+    
+    aaguid = models.CharField(
+        max_length=36,
+        blank=True,
+        verbose_name=_(u'AAGUID'),
+        help_text=_(u'Authenticator AAGUID')
+    )
+    
+    sign_count = models.IntegerField(
+        default=0,
+        verbose_name=_(u'Sign Count'),
+        help_text=_(u'Signature counter for cloned device detection')
+    )
+    
+    transports = models.JSONField(
+        default=list,
+        verbose_name=_(u'Transports'),
+        help_text=_(u'Supported transports')
+    )
+    
+    authenticator_attachment = models.CharField(
+        max_length=20,
+        choices=[
+            ('platform', 'Platform Authenticator'),
+            ('cross-platform', 'Cross-Platform Authenticator'),
+        ],
+        null=True,
+        blank=True,
+        verbose_name=_(u'Authenticator Attachment')
+    )
+    
+    name = models.CharField(
+        max_length=200,
+        blank=True,
+        verbose_name=_(u'Name'),
+        help_text=_(u'User-given name for this credential')
+    )
+    
+    backup_eligible = models.BooleanField(
+        default=False,
+        verbose_name=_(u'Backup Eligible')
+    )
+    
+    backup_state = models.BooleanField(
+        default=False,
+        verbose_name=_(u'Backup State')
+    )
+    
+    attestation_format = models.CharField(
+        max_length=50,
+        blank=True,
+        verbose_name=_(u'Attestation Format')
+    )
+    
+    attestation_object = models.TextField(
+        blank=True,
+        verbose_name=_(u'Attestation Object')
+    )
+    
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name=_(u'Created At')
+    )
+    
+    last_used_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_(u'Last Used At')
+    )
+    
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name=_(u'Is Active')
+    )
+    
+    class Meta:
+        verbose_name = _(u'WebAuthn Credential')
+        verbose_name_plural = _(u'WebAuthn Credentials')
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        name = self.name or f'{self.authenticator_attachment} authenticator'
+        return u'{0} - {1}'.format(self.user.username, name)
+    
+    def update_last_used(self, sign_count=None):
+        """Update last used timestamp and sign count."""
+        self.last_used_at = timezone.now()
+        if sign_count is not None:
+            if sign_count != 0 and sign_count <= self.sign_count:
+                self.is_active = False
+            self.sign_count = sign_count
+        self.save()
+    
+    @property
+    def credential_id_bytes(self):
+        """Get credential ID as bytes."""
+        import base64
+        return base64.b64decode(self.credential_id)
+    
+    @property
+    def public_key_bytes(self):
+        """Get public key as bytes."""
+        import base64
+        return base64.b64decode(self.public_key)
+
+
+class WebAuthnChallenge(models.Model):
+    """Temporary challenge storage for WebAuthn."""
+    
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='webauthn_challenges',
+        verbose_name=_(u'User')
+    )
+    
+    challenge = models.TextField(
+        verbose_name=_(u'Challenge'),
+        help_text=_(u'Base64-encoded challenge')
+    )
+    
+    challenge_type = models.CharField(
+        max_length=20,
+        choices=[
+            ('registration', 'Registration'),
+            ('authentication', 'Authentication'),
+        ],
+        verbose_name=_(u'Challenge Type')
+    )
+    
+    session_key = models.CharField(
+        max_length=40,
+        db_index=True,
+        verbose_name=_(u'Session Key')
+    )
+    
+    client_data_json = models.TextField(
+        blank=True,
+        verbose_name=_(u'Client Data JSON')
+    )
+    
+    expires_at = models.DateTimeField(verbose_name=_(u'Expires At'))
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name=_(u'Created At'))
+    used = models.BooleanField(default=False, verbose_name=_(u'Used'))
+    
+    class Meta:
+        verbose_name = _(u'WebAuthn Challenge')
+        verbose_name_plural = _(u'WebAuthn Challenges')
+    
+    def is_valid(self):
+        """Check if challenge is still valid."""
+        return not self.used and timezone.now() < self.expires_at
+    
+    def mark_used(self):
+        """Mark challenge as used."""
+        self.used = True
+        self.save()
+    
+    @property
+    def challenge_bytes(self):
+        """Get challenge as bytes."""
+        import base64
+        return base64.b64decode(self.challenge)
+
+
+class PasskeyAuthenticationLog(models.Model):
+    """Audit log for passkey authentication."""
+    
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='passkey_auth_logs',
+        verbose_name=_(u'User')
+    )
+    
+    credential = models.ForeignKey(
+        'WebAuthnCredential',
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='auth_logs',
+        verbose_name=_(u'Credential')
+    )
+    
+    success = models.BooleanField(verbose_name=_(u'Success'))
+    failure_reason = models.CharField(max_length=200, blank=True, verbose_name=_(u'Failure Reason'))
+    
+    ip_address = models.GenericIPAddressField(null=True, verbose_name=_(u'IP Address'))
+    user_agent = models.TextField(blank=True, verbose_name=_(u'User Agent'))
+    client_id = models.CharField(max_length=255, blank=True, verbose_name=_(u'Client ID'))
+    
+    timestamp = models.DateTimeField(auto_now_add=True, verbose_name=_(u'Timestamp'))
+    
+    class Meta:
+        verbose_name = _(u'Passkey Authentication Log')
+        verbose_name_plural = _(u'Passkey Authentication Logs')
+        ordering = ['-timestamp']
+
+
+class RefreshTokenHistory(models.Model):
+    """Track refresh token rotation history."""
+    
+    token = models.ForeignKey(
+        'Token',
+        on_delete=models.CASCADE,
+        related_name='previous_refresh_tokens',
+        verbose_name=_(u'Token')
+    )
+    
+    jti = models.CharField(max_length=255, db_index=True, verbose_name=_(u'JTI'))
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name=_(u'Created At'))
+    revoked = models.BooleanField(default=False, verbose_name=_(u'Revoked'))
+    
+    class Meta:
+        verbose_name = _(u'Refresh Token History')
+        verbose_name_plural = _(u'Refresh Token Histories')
+    
+    def __str__(self):
+        return u'Refresh token {0} for {1}'.format(self.jti[:8], self.token)

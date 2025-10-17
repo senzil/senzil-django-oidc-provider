@@ -1,6 +1,36 @@
+# Package Manifest - Include necessary files in distribution
+
+# Core files
 include LICENSE
 include README.md
+include MODERNIZATION.md
+include IMPLEMENTATION_CHANGES.md
+include pyproject.toml
+include setup.cfg
+include requirements.txt
+
+# Documentation
+recursive-include docs *.md
+recursive-include docs *.rst
+recursive-include docs/images *
+
+# Package data
 recursive-include oidc_provider/static *
 recursive-include oidc_provider/templates *
-recursive-include oidc_provider/tests/templates *
 recursive-include oidc_provider/locale *
+recursive-include oidc_provider/tests/templates *
+
+# Exclude development and build files
+global-exclude __pycache__
+global-exclude *.py[co]
+global-exclude .DS_Store
+global-exclude *.swp
+global-exclude *~
+
+# Exclude tests and examples from distribution
+prune example
+prune oidc_provider/tests/__pycache__
+exclude .gitignore
+exclude .editorconfig
+exclude tox.ini
+exclude *.txt

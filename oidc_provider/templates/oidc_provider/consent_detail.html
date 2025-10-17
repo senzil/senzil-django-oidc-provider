@@ -1,0 +1,245 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ consent.client.name }} - Permission Details</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f3f4f6;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .back-link {
+            display: inline-block;
+            color: #667eea;
+            text-decoration: none;
+            margin-bottom: 16px;
+            font-size: 14px;
+        }
+        
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        
+        .detail-card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            margin-bottom: 16px;
+        }
+        
+        .client-header {
+            text-align: center;
+            padding-bottom: 24px;
+            border-bottom: 1px solid #e5e7eb;
+            margin-bottom: 24px;
+        }
+        
+        .client-logo {
+            width: 80px;
+            height: 80px;
+            border-radius: 16px;
+            margin: 0 auto 16px;
+            background: #f3f4f6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+        }
+        
+        .client-name {
+            font-size: 24px;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 8px;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .status-active {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .status-expired {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        .info-section {
+            margin-bottom: 24px;
+        }
+        
+        .info-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+        
+        .info-value {
+            font-size: 14px;
+            color: #1f2937;
+        }
+        
+        .permissions-list {
+            margin-top: 8px;
+        }
+        
+        .permission-item {
+            display: flex;
+            align-items: start;
+            margin-bottom: 12px;
+            padding: 12px;
+            background: #f9fafb;
+            border-radius: 8px;
+        }
+        
+        .permission-icon {
+            width: 20px;
+            height: 20px;
+            background: #667eea;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            flex-shrink: 0;
+            margin-right: 12px;
+            margin-top: 2px;
+        }
+        
+        .permission-content {
+            flex: 1;
+        }
+        
+        .permission-name {
+            font-size: 14px;
+            font-weight: 500;
+            color: #1f2937;
+            margin-bottom: 4px;
+        }
+        
+        .permission-description {
+            font-size: 13px;
+            color: #6b7280;
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+        
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="{% url 'oidc_provider:consent-list' %}" class="back-link">← Back to all permissions</a>
+        
+        <div class="detail-card">
+            <div class="client-header">
+                <div class="client-logo">
+                    {% if consent.client.logo %}
+                        <img src="{{ consent.client.logo.url }}" alt="{{ consent.client.name }}" 
+                             style="width: 100%; height: 100%; object-fit: cover; border-radius: 16px;">
+                    {% else %}
+                        🔐
+                    {% endif %}
+                </div>
+                <div class="client-name">{{ consent.client.name }}</div>
+                <span class="status-badge {% if is_expired %}status-expired{% else %}status-active{% endif %}">
+                    {% if is_expired %}Expired{% else %}Active{% endif %}
+                </span>
+            </div>
+            
+            <div class="info-section">
+                <div class="info-label">Authorization Date</div>
+                <div class="info-value">{{ consent.date_given|date:"F d, Y \a\t g:i A" }}</div>
+            </div>
+            
+            <div class="info-section">
+                <div class="info-label">Expires</div>
+                <div class="info-value">{{ consent.expires_at|date:"F d, Y \a\t g:i A" }}</div>
+            </div>
+            
+            <div class="info-section">
+                <div class="info-label">Permissions Granted</div>
+                <div class="permissions-list">
+                    {% for scope in scopes %}
+                    <div class="permission-item">
+                        <div class="permission-icon">✓</div>
+                        <div class="permission-content">
+                            <div class="permission-name">{{ scope.name }}</div>
+                            <div class="permission-description">{{ scope.description }}</div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            {% if consent.client.website_url %}
+            <div class="info-section">
+                <div class="info-label">Application Website</div>
+                <div class="info-value">
+                    <a href="{{ consent.client.website_url }}" target="_blank" style="color: #667eea;">
+                        {{ consent.client.website_url }}
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        
+        {% if not is_expired %}
+        <form method="post" action="{% url 'oidc_provider:consent-revoke' consent.id %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger" 
+                    onclick="return confirm('Are you sure you want to revoke access for {{ consent.client.name }}?')">
+                Revoke Access
+            </button>
+        </form>
+        {% endif %}
+    </div>
+</body>
+</html>

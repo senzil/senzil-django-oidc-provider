@@ -1,0 +1,285 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Authorization Request - {{ client.name }}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .consent-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 480px;
+            width: 100%;
+            overflow: hidden;
+        }
+        
+        .consent-header {
+            background: #667eea;
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .consent-header h1 {
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+        
+        .consent-header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+        
+        .client-info {
+            padding: 24px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .client-logo {
+            width: 64px;
+            height: 64px;
+            border-radius: 12px;
+            margin: 0 auto 16px;
+            background: #f3f4f6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+        }
+        
+        .client-name {
+            text-align: center;
+            font-size: 18px;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 8px;
+        }
+        
+        .client-description {
+            text-align: center;
+            font-size: 14px;
+            color: #6b7280;
+        }
+        
+        .permissions-section {
+            padding: 24px;
+        }
+        
+        .permissions-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 16px;
+        }
+        
+        .permission-item {
+            display: flex;
+            align-items: start;
+            margin-bottom: 16px;
+            padding: 12px;
+            background: #f9fafb;
+            border-radius: 8px;
+        }
+        
+        .permission-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .permission-icon {
+            width: 20px;
+            height: 20px;
+            background: #667eea;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            flex-shrink: 0;
+            margin-right: 12px;
+            margin-top: 2px;
+        }
+        
+        .permission-content {
+            flex: 1;
+        }
+        
+        .permission-name {
+            font-size: 14px;
+            font-weight: 500;
+            color: #1f2937;
+            margin-bottom: 4px;
+        }
+        
+        .permission-description {
+            font-size: 13px;
+            color: #6b7280;
+            line-height: 1.4;
+        }
+        
+        .consent-actions {
+            padding: 24px;
+            background: #f9fafb;
+            display: flex;
+            gap: 12px;
+        }
+        
+        .btn {
+            flex: 1;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-secondary {
+            background: white;
+            color: #6b7280;
+            border: 1px solid #d1d5db;
+        }
+        
+        .btn-secondary:hover {
+            background: #f9fafb;
+            border-color: #9ca3af;
+        }
+        
+        .consent-footer {
+            padding: 16px 24px;
+            background: #f3f4f6;
+            text-align: center;
+            font-size: 12px;
+            color: #6b7280;
+        }
+        
+        .consent-footer a {
+            color: #667eea;
+            text-decoration: none;
+        }
+        
+        .consent-footer a:hover {
+            text-decoration: underline;
+        }
+
+        .remember-choice {
+            padding: 16px 24px;
+            background: #eff6ff;
+            border-top: 1px solid #dbeafe;
+            border-bottom: 1px solid #dbeafe;
+        }
+
+        .checkbox-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .checkbox-wrapper input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .checkbox-wrapper label {
+            font-size: 14px;
+            color: #1e40af;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="consent-container">
+        <div class="consent-header">
+            <h1>Authorization Request</h1>
+            <p>{{ user.get_full_name|default:user.username }}</p>
+        </div>
+        
+        <div class="client-info">
+            <div class="client-logo">
+                {% if client.logo %}
+                    <img src="{{ client.logo.url }}" alt="{{ client.name }}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 12px;">
+                {% else %}
+                    🔐
+                {% endif %}
+            </div>
+            <div class="client-name">{{ client.name }}</div>
+            <div class="client-description">
+                wants to access your account
+            </div>
+        </div>
+        
+        <div class="permissions-section">
+            <div class="permissions-title">This application will be able to:</div>
+            {% for scope in scopes %}
+            <div class="permission-item">
+                <div class="permission-icon">✓</div>
+                <div class="permission-content">
+                    <div class="permission-name">{{ scope.name }}</div>
+                    <div class="permission-description">{{ scope.description }}</div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        {% if client.reuse_consent %}
+        <div class="remember-choice">
+            <div class="checkbox-wrapper">
+                <input type="checkbox" id="remember-consent" name="remember_consent" checked>
+                <label for="remember-consent">Remember this choice and don't ask again</label>
+            </div>
+        </div>
+        {% endif %}
+        
+        <form method="post" action="{% url 'oidc_provider:authorize' %}">
+            {% csrf_token %}
+            {{ hidden_inputs }}
+            
+            <div class="consent-actions">
+                <button type="submit" class="btn btn-secondary">Decline</button>
+                <button type="submit" name="allow" class="btn btn-primary">Authorize</button>
+            </div>
+        </form>
+        
+        <div class="consent-footer">
+            By authorizing, you allow {{ client.name }} to use your information in accordance with their 
+            {% if client.terms_url %}
+                <a href="{{ client.terms_url }}" target="_blank">terms of service</a>
+            {% else %}
+                terms of service
+            {% endif %}
+            and privacy policy.
+        </div>
+    </div>
+</body>
+</html>
