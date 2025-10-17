@@ -59,25 +59,14 @@ def create_id_token(token, user, aud, nonce='', at_hash='', request=None, scope=
     user_auth_time = user.last_login or user.date_joined
     auth_time = int(dateformat.format(user_auth_time, 'U'))
 
-    # Determine audience - prefer origin domain over client_id
-    from oidc_provider.lib.utils.audience import get_id_token_audience, is_origin_allowed_for_client
-    from oidc_provider.middleware_origin import get_request_origin
+    # Determine audience for ID token
+    # Per OIDC Core 1.0: ID token audience MUST be the client_id
+    # ID tokens are consumed BY the client, so client is the audience
+    from oidc_provider.lib.utils.audience import get_id_token_audience
     
-    # Use origin domain as audience if available and allowed
-    audience = None
-    if request:
-        origin = get_request_origin(request)
-        if origin:
-            # Validate origin is allowed for this client
-            if is_origin_allowed_for_client(origin, token.client):
-                audience = origin
-            else:
-                # Origin not allowed - use client_id as fallback
-                # (Will be caught by middleware if strict_origin_validation=True)
-                pass
-    
-    if not audience:
-        audience = str(aud)  # Fallback to provided aud (client_id)
+    # Use client_id as audience (OIDC spec requirement)
+    # The 'aud' parameter passed in is already the client_id
+    audience = str(aud)  # This is the client_id (OIDC compliant)
 
     # Required OIDC claims - ALWAYS include these
     dic = {
@@ -251,9 +240,10 @@ def encode_access_token_jwt(user, client, token, request):
     if user is not None:
         payload['sub'] = settings.get('OIDC_IDTOKEN_SUB_GENERATOR', import_str=True)(user=user)
 
-    # Audience - use origin domain as the resource server
+    # Audience - use resource server/API as audience (OAuth 2.0 best practice)
     from oidc_provider.lib.utils.audience import get_access_token_audience
-    payload['aud'] = get_access_token_audience(client, request)
+    # Access token aud should identify the API/resource server, not the client
+    payload['aud'] = get_access_token_audience(client, request, validate=False)
 
     if settings.get('OIDC_TOKEN_JWT_EXTRA_INFO'):
         extra_info = settings.get('OIDC_TOKEN_JWT_EXTRA_INFO', import_str=True)(token)
