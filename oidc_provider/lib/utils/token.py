@@ -42,7 +42,7 @@ def create_id_token(token, user, aud, nonce='', at_hash='', request=None, scope=
     Guarantees all required OIDC claims are present:
     - iss (issuer)
     - sub (subject)
-    - aud (audience)
+    - aud (audience) - uses origin domain if available
     - exp (expiration)
     - iat (issued at)
     """
@@ -59,11 +59,20 @@ def create_id_token(token, user, aud, nonce='', at_hash='', request=None, scope=
     user_auth_time = user.last_login or user.date_joined
     auth_time = int(dateformat.format(user_auth_time, 'U'))
 
+    # Determine audience - prefer origin domain over client_id
+    from oidc_provider.lib.utils.audience import get_id_token_audience
+    from oidc_provider.middleware_origin import get_request_origin
+    
+    # Use origin domain as audience if available
+    audience = get_request_origin(request) if request else None
+    if not audience:
+        audience = str(aud)  # Fallback to provided aud (client_id)
+
     # Required OIDC claims - ALWAYS include these
     dic = {
         'iss': get_issuer(request=request),
         'sub': sub,
-        'aud': str(aud),
+        'aud': audience,  # Now uses origin domain
         'exp': exp_time,
         'iat': iat_time,
         'auth_time': auth_time,
@@ -94,7 +103,7 @@ def create_id_token(token, user, aud, nonce='', at_hash='', request=None, scope=
     if 'sub' not in dic:
         dic['sub'] = sub
     if 'aud' not in dic:
-        dic['aud'] = str(aud)
+        dic['aud'] = audience
     if 'exp' not in dic:
         dic['exp'] = exp_time
     if 'iat' not in dic:
@@ -231,12 +240,9 @@ def encode_access_token_jwt(user, client, token, request):
     if user is not None:
         payload['sub'] = settings.get('OIDC_IDTOKEN_SUB_GENERATOR', import_str=True)(user=user)
 
-    # Audience - ALWAYS include (use configured or default to client_id)
-    if settings.get('OIDC_TOKEN_JWT_AUD') is not None:
-        payload['aud'] = settings.get('OIDC_TOKEN_JWT_AUD', import_str=True)(client=client)
-    else:
-        # Default: audience is the client_id (represents the resource server)
-        payload['aud'] = str(client.client_id)
+    # Audience - use origin domain as the resource server
+    from oidc_provider.lib.utils.audience import get_access_token_audience
+    payload['aud'] = get_access_token_audience(client, request)
 
     if settings.get('OIDC_TOKEN_JWT_EXTRA_INFO'):
         extra_info = settings.get('OIDC_TOKEN_JWT_EXTRA_INFO', import_str=True)(token)
