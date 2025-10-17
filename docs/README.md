@@ -12,6 +12,7 @@ Welcome to the comprehensive documentation for the modernized Django OIDC Provid
 ### Core Features
 - [Token Algorithms & Encryption](algorithms-encryption.md) - JWT algorithms and JWE
 - [All OIDC Flows](oidc-flows.md) - Complete flow documentation
+- [Client Registration](client-registration.md) - Dynamic client registration API
 - [Passkey Authentication](passkeys.md) - WebAuthn/FIDO2 implementation
 - [Origin Security](origin-security.md) - Domain validation and tracking
 - [Refresh Tokens](refresh-tokens.md) - Advanced refresh token features

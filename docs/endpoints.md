@@ -2,6 +2,36 @@
 
 ## Standard OIDC Endpoints
 
+### Client Registration (RFC 7591)
+
+**POST** `/oidc/register/`
+
+Register a new client dynamically.
+
+Body:
+```json
+{
+  "redirect_uris": ["https://app.com/callback"],
+  "client_name": "My App",
+  "scope": "openid profile email"
+}
+```
+
+Response:
+```json
+{
+  "client_id": "...",
+  "client_secret": "...",
+  ...
+}
+```
+
+See: [Client Registration Guide](client-registration.md)
+
+---
+
+## Standard OIDC Endpoints
+
 ### Discovery
 
 **GET** `/.well-known/openid-configuration`

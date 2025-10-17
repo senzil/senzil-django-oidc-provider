@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - Latest Features
+
+#### Dynamic Client Registration (NEW! 🎉)
+- **RFC 7591**: OAuth 2.0 Dynamic Client Registration Protocol
+- **RFC 7592**: OAuth 2.0 Dynamic Client Registration Management Protocol
+- **Endpoints**:
+  - `POST /oidc/register/` - Register new client
+  - `GET /oidc/register/{client_id}/` - Get client configuration
+  - `PUT /oidc/register/{client_id}/` - Update client
+  - `DELETE /oidc/register/{client_id}/` - Delete client
+- **Features**:
+  - Self-service client registration
+  - Automatic credential generation
+  - Support for confidential and public clients
+  - Full CRUD operations
+  - Standards-compliant implementation
+
 ### Added - Complete Modernization 🎉
 
 #### Security & Cryptography
